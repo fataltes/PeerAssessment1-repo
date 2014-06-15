@@ -3,6 +3,15 @@
 
 The only problem with this data set is that the intervals between 55 and 100 are missing in all days!!
 
+I need an extra library that must be loaded. 
+
+```r
+if(!is.element('reshape', installed.packages()[,1]))
+{install.packages('reshape')
+}
+library(reshape)
+```
+
 ## Loading and preprocessing the data
 
 read the activity data into actData variable 
@@ -161,4 +170,44 @@ but median has changed, and that is because median sorts the values of a vector 
 with the NA values ommited from the first steps, middle of chain was some place different from when the NA values where replaced with steps mean.
 
 ## Are there differences in activity patterns between weekdays and weekends?
-1. Create a new factor variable in the dataset with two levels - "weekday" and "weekend".
+### 1. Create a new factor variable in the dataset with two levels - "weekday" and "weekend"
+
+first I must change the locale of time so the weekend and weekdays won't be computed due to my locale :
+
+```r
+Sys.setlocale("LC_TIME", "English")
+```
+
+```
+## [1] "English_United States.1252"
+```
+then compute the weekDays factor :
+
+```r
+weekdaysFactor <- as.factor(ifelse(weekdays(as.Date(actData$date)) %in% c("Saturday","Sunday"),"weekend", "weekday"))
+```
+
+### 2. Make a panel plot containing time series plot of the 5-minute interval steps for weekdays and weekends
+
+In this phase, I must compute the average of steps in each 5-minute due to the weekends and weekdays :
+in the code below, weekdaySeperated is a list of size two which separates the weekday and weekend data in actData
+
+```r
+weekdaySeparated<-split(actData, weekdaysFactor)
+weekdayStepsAvg<-lapply(weekdaySeparated, function(x) sapply(split(x[,1], x[,3]), mean, na.rm=TRUE))
+```
+weekdayStepsAvg is a list of size two. in each list we have the average steps per each 5-minute interval.
+
+```r
+intervalFactor<-as.factor(intervals)
+distinctIntervals<-levels(intervalFactor)
+plot(x=distinctIntervals, y=weekdayStepsAvg$weekday, type="l")
+```
+
+![plot of chunk unnamed-chunk-17](figures/unnamed-chunk-171.png) 
+
+```r
+plot(x=distinctIntervals, y=weekdayStepsAvg$weekend, type="l")
+```
+
+![plot of chunk unnamed-chunk-17](figures/unnamed-chunk-172.png) 
