@@ -3,13 +3,17 @@
 
 The only problem with this data set is that the intervals between 55 and 100 are missing in all days!!
 
-I need an extra library that must be loaded. 
+I need some extra libraries that must be loaded. 
 
 ```r
 if(!is.element('reshape', installed.packages()[,1]))
 {install.packages('reshape')
 }
+if(!is.element('lattice', installed.packages()[,1]))
+{install.packages('lattice')
+}
 library(reshape)
+library(lattice)
 ```
 
 ## Loading and preprocessing the data
@@ -98,6 +102,12 @@ plot(as.numeric(names(avgIntervalSteps)), avgIntervalSteps, type="l", main="Time
 ```r
 maxSteps<-max(avgIntervalSteps)
 maxStepsIndex<- which.max(avgIntervalSteps)
+maxStepsIndex
+```
+
+```
+## 835 
+## 104
 ```
 the maximum number of steps is "206.1698" which occurs in 5-minute interval with the name **"835"** 
 ## Imputing missing values
@@ -165,14 +175,14 @@ cbind(rawStepsInfo=dailyStepsInfo, imputedStepsInfo=imputedDailyStepsInfo)
 ## dailyStepsMean           9354             9354
 ## dailyStepsMedian        10395            10439
 ```
-as you can see, no changes occurs in the mean of dailysteps, and its clear why, cause as we insert values equal to mean to a series of numbers, their mean won't change.
+As you can see, no changes occurs in the mean of dailysteps, because as we insert values equal to mean to a series of numbers, their mean won't change.
 but median has changed, and that is because median sorts the values of a vector and chooses the number in the middle of this chain.
 with the NA values ommited from the first steps, middle of chain was some place different from when the NA values where replaced with steps mean.
 
 ## Are there differences in activity patterns between weekdays and weekends?
 ### 1. Create a new factor variable in the dataset with two levels - "weekday" and "weekend"
 
-first I must change the locale of time so the weekend and weekdays won't be computed due to my locale :
+First I must change the locale of time so the weekend and weekdays won't be computed due to my locale :
 
 ```r
 Sys.setlocale("LC_TIME", "English")
@@ -195,19 +205,44 @@ in the code below, weekdaySeperated is a list of size two which separates the we
 ```r
 weekdaySeparated<-split(actData, weekdaysFactor)
 weekdayStepsAvg<-lapply(weekdaySeparated, function(x) sapply(split(x[,1], x[,3]), mean, na.rm=TRUE))
+avgStepsPerInterval<-cbind(interval=levels(intervalFactor),weekday=weekdayStepsAvg$weekday, weekend=weekdayStepsAvg$weekend)
+```
+
+```
+## Error: object 'intervalFactor' not found
 ```
 weekdayStepsAvg is a list of size two. in each list we have the average steps per each 5-minute interval.
+first I compute the distinct intervals
 
 ```r
 intervalFactor<-as.factor(intervals)
 distinctIntervals<-levels(intervalFactor)
-plot(x=distinctIntervals, y=weekdayStepsAvg$weekday, type="l")
 ```
-
-![plot of chunk unnamed-chunk-17](figures/unnamed-chunk-171.png) 
+then join these three vectors of "interval", "weekday", "weekend" into one data frame
 
 ```r
-plot(x=distinctIntervals, y=weekdayStepsAvg$weekend, type="l")
+avgStepsPerInterval<-as.data.frame(
+  cbind(interval=as.numeric(levels(intervalFactor)),
+        weekday=weekdayStepsAvg$weekday, 
+        weekend=weekdayStepsAvg$weekend))
+head(avgStepsPerInterval)
 ```
 
-![plot of chunk unnamed-chunk-17](figures/unnamed-chunk-172.png) 
+```
+##    interval weekday weekend
+## 0         0  2.3333   0.000
+## 5         5  0.4615   0.000
+## 10       10  0.1795   0.000
+## 15       15  0.2051   0.000
+## 20       20  0.1026   0.000
+## 25       25  1.5128   3.714
+```
+now using the melt function I pivot the data according to "interval" variable
+and then plot the two values "weekday" and "weekend" due to this variable
+
+```r
+meltedAvg<-melt(avgStepsPerInterval, id.vars="interval")
+xyplot(value~interval|variable, data=meltedAvg, type="l", scales=list(y=list(relation="free")), layout=c(1, 2))
+```
+
+![plot of chunk unnamed-chunk-19](figures/unnamed-chunk-19.png) 
